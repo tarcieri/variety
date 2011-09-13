@@ -20,39 +20,36 @@ class ChatServer
   def register(name, client)
     @users[name] = client
     event :join, name
-    publish :control, name, 'joined the chat room'
   end
   
   def unregister(name)
     @users.delete name
     event :part, name
-    publish :control, name, 'left the chat room'
   end
   
   def send_message(user, str)
     event :message, user, str
-    publish :message, user, str
   end
     
   def users
     @users.map { |name, _| {:name => name} }
   end
-  
-  def event(type, user, str = nil)
+    
+  def event(type, user, content = nil)
     ev = {
       :event => type,
-      :ts    => Time.now.xmlschema,
+      :time  => Time.now.xmlschema,
       :user  => user
     }
-    ev.merge!(:text => str) if str
+    ev[:content] = content if content
+    
     @history << ev
+    publish ev
   end
   
-  def publish(type, user, str)
-    msg = {:action => type, :user => user, :message => str}.to_json
-    
+  def publish(message)    
     @users.each do |_, user|
-      user.send_message msg
+      user.send_message message
     end
   end
 end
